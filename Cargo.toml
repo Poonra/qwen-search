@@ -1,0 +1,15 @@
+[package]
+name = "qwen-search"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = "0.4.45"
+futures-util = "0.3.34"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+scraper = "0.20"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tokio = { version = "1.53.1", features = ["full"] }
+url = "2.5.8"
