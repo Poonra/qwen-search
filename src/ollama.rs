@@ -4,14 +4,14 @@ use serde_json::{Value, json};
 
 const  OLLAMA_URL :&str = "http://localhost:11434";
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)];
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Message {
     pub role: String,
     #[serde(default)]
     pub content: String,
-    #[serde(default, skip_serializing_if="Vec::is_empty)]
+    #[serde(default, skip_serializing_if="Vec::is_empty")]
     pub tool_calls: Vec<ToolCall>,
-    #[serde(default, skip_serializing_if="Option::is_none)]
+    #[serde(default, skip_serializing_if="Option::is_none")]
     pub tool_name: Option<String>,
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -33,6 +33,6 @@ impl Message {
         Self { role: "User".into(),content: content.into(), ..Default::default() }
     }
     pub fn tool(name: &str, content: impl Into<String>) -> Self {
-        Self { role: "tool".into(), content}
+        Self { role: "tool".into(), content: content.into(), tool_name: Some(name.into()), ..Default::default() }
     }
 }
