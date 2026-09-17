@@ -3,7 +3,7 @@ use crate::ollama::{Message, Ollama, ToolCall};
 use crate::search::{self, Websearch};
 use anyhow::Result;
 use serde_json::{Value, json};
-
+use std::io::{self, Write};
 const MAX_TOOL_ROUNDS: usize = 3;
 
 pub struct Agent {
@@ -70,15 +70,20 @@ impl Agent {
         }
         for round in 0..=MAX_TOOL_ROUNDS {
             let tools = (online && round < MAX_TOOL_ROUNDS).then_some(&self.tools);
-            let reply = self.llm.chat(&self.history, tools).await?;
+            let reply = self
+                .llm
+                .chat_stream(&self.history, tools, |token| {
+                    print!("{token}");
+                    let _ = io::stdout().flush();
+                })
+                .await?;
 
             let calls = reply.tool_calls.clone();
+            self.history.push(reply);
             if calls.is_empty() {
-                println!("{}", reply.content);
-                self.history.push(reply);
+                println!();
                 return Ok(());
             }
-            self.history.push(reply);
             for call in &calls {
                 let result = self.run_tool(call).await;
                 self.history
