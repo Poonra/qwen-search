@@ -56,7 +56,7 @@ struct ChatRequest<'a> {
     messages: &'a [Message],
     #[serde(skip_serializing_if = "Option::is_none")]
     tools: Option<&'a Value>,
-    stream:bool,
+    stream: bool,
     options: Value,
 }
 
@@ -66,21 +66,38 @@ struct ChatResponse {
 }
 
 pub struct Ollama {
-    http:reqwest::Client,
+    http: reqwest::Client,
     model: String,
 }
 
 impl Ollama {
     pub fn new(model: &str) -> Self {
-        Self { http: reqwest::Client::new(), model: model.to_string() }
+        Self {
+            http: reqwest::Client::new(),
+            model: model.to_string(),
+        }
     }
-    async fn send(&self, messages: &[Message], tools: Option<&Value>, stream: bool) -> Result<reqwest::Response>
-    {
+    async fn send(
+        &self,
+        messages: &[Message],
+        tools: Option<&Value>,
+        stream: bool,
+    ) -> Result<reqwest::Response> {
         let body = ChatRequest {
-            model: &self.model, messages, tools,stream,options:json!({"num_ctx": 8192}),
+            model: &self.model,
+            messages,
+            tools,
+            stream,
+            options: json!({"num_ctx": 8192}),
         };
 
-        let resp = self.http.post(format!("{OLLAMA_URL}/api/chat")).json(&body).send().await.context("Failed to send request systemctl status ollama")?;
+        let resp = self
+            .http
+            .post(format!("{OLLAMA_URL}/api/chat"))
+            .json(&body)
+            .send()
+            .await
+            .context("Failed to send request systemctl status ollama")?;
 
         if !resp.status().is_success() {
             let status = resp.status();
@@ -89,9 +106,9 @@ impl Ollama {
         }
         Ok(resp)
     }
-    pub async fn chat(&self,messages: &[Message], tools: Option<&Value>) -> Result<Message>{
+    pub async fn chat(&self, messages: &[Message], tools: Option<&Value>) -> Result<Message> {
         let resp = self.send(messages, tools, false).await?;
-        let parsed: ChatResponse =resp.json().await?;
+        let parsed: ChatResponse = resp.json().await?;
         Ok(parsed.message)
     }
 }

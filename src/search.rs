@@ -16,18 +16,25 @@ pub struct Websearch {
 
 impl Websearch {
     pub fn new() -> Result<Self> {
-        let http = reqwest::Client::builder().user_agent(USER_AGENT).timeout(Duration::from_secs(10)).build()?;
+        let http = reqwest::Client::builder()
+            .user_agent(USER_AGENT)
+            .timeout(Duration::from_secs(10))
+            .build()?;
 
         Ok(Self { http })
     }
 
     pub async fn search(&self, query: &str, max: usize) -> Result<Vec<SearchResult>> {
-        let html = self.http.post("https://html.duckduckgo.com/html/")
+        let html = self
+            .http
+            .post("https://html.duckduckgo.com/html/")
             .form(&[("q", query)])
             .send()
             .await
             .context("Error sending search request")?
-            .error_for_status()?.text().await?;
+            .error_for_status()?
+            .text()
+            .await?;
         Ok(parse_ddg(&html, max))
     }
 }
@@ -48,14 +55,22 @@ fn parse_ddg(html: &str, max: usize) -> Vec<SearchResult> {
                 .next()
                 .map(|s| s.text().collect::<String>().trim().to_string())
                 .unwrap_or_default();
-            Some(SearchResult { title, url, snippet })
+            Some(SearchResult {
+                title,
+                url,
+                snippet,
+            })
         })
         .take(max)
         .collect()
 }
 
 fn clean_ddg_url(href: &str) -> String {
-    let full = if href.starts_with("//") { format!("https:{href}") } else { href.to_string() };
+    let full = if href.starts_with("//") {
+        format!("https:{href}")
+    } else {
+        href.to_string()
+    };
     if let Ok(u) = url::Url::parse(&full) {
         if let Some((_, real)) = u.query_pairs().find(|(k, _)| k == "uddg") {
             return real.to_string();
@@ -68,10 +83,13 @@ pub fn format_results(results: &[SearchResult]) -> String {
     if results.is_empty() {
         return "no results found".into();
     }
-    results.iter().enumerate().map(|(i, r)| {
-        let snippet: String = r.snippet.chars().take(300).collect();
-        format!("[{}] {}\n{}\n{}", i + 1, r.title, r.url, snippet)
-    })
+    results
+        .iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let snippet: String = r.snippet.chars().take(300).collect();
+            format!("[{}] {}\n{}\n{}", i + 1, r.title, r.url, snippet)
+        })
         .collect::<Vec<_>>()
         .join("\n\n")
 }
