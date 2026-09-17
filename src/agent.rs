@@ -57,12 +57,24 @@ impl Agent {
             eprintln!("[offline - no web search] thinking!");
         }
 
-        self.history.push(Message::user(input));
-        // always search first, whether the model asked for it or not\
-        if online {
+        // "/s" anywhere in the message forces a search
+        let force = input.split_whitespace().any(|w| w == "/s");
+        let input = if force {
+            input
+                .split_whitespace()
+                .filter(|w| *w != "/s")
+                .collect::<Vec<_>>()
+                .join(" ")
+        } else {
+            input.to_string()
+        };
+
+        self.history.push(Message::user(&input));
+        // "/s" was given, so search before the model even asks
+        if online && force {
             eprintln!("[searching: {input}]");
 
-            let results = match self.search.search(input, 5).await {
+            let results = match self.search.search(&input, 5).await {
                 Ok(r) => search::format_results(&r),
                 Err(e) => format!("Search failed ({e}). Answer from your own knowledge."),
             };
