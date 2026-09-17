@@ -1,3 +1,4 @@
+use crate::net;
 use crate::ollama::{Message, Ollama, ToolCall};
 use crate::search::{self, Websearch};
 use anyhow::Result;
@@ -51,14 +52,22 @@ impl Agent {
     }
 
     pub async fn ask(&mut self, input: &str) -> Result<()> {
+        let online = net::is_online().await;
+        if !online {
+            eprintln!("[offline - no web search] thinking!");
+        }
+
         self.history.push(Message::user(input));
-        // always search first, whether the model asked for it or not
-        eprintln!("[searching: {input}]");
-        let results = match self.search.search(input, 5).await {
-            Ok(r) => search::format_results(&r),
-            Err(e) => format!("Search failed ({e}). Answer from your own knowledge."),
-        };
-        self.history.push(Message::tool("web_search", results));
+        // always search first, whether the model asked for it or not\
+        if online {
+            eprintln!("[searching: {input}]");
+
+            let results = match self.search.search(input, 5).await {
+                Ok(r) => search::format_results(&r),
+                Err(e) => format!("Search failed ({e}). Answer from your own knowledge."),
+            };
+            self.history.push(Message::tool("web_search", results));
+        }
         for round in 0..=MAX_TOOL_ROUNDS {
             let tools = (round < MAX_TOOL_ROUNDS).then_some(&self.tools);
             let reply = self.llm.chat(&self.history, tools).await?;
